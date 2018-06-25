@@ -1,0 +1,22 @@
+// attraction-service/proto/attraction/attraction.proto
+syntax = "proto3";
+
+package go.micro.srv.attraction; 
+
+service AttractionService {
+  rpc CreateAttraction(Attraction) returns (Response) {}
+}
+
+message Attraction {
+  string id = 1;
+  string description = 2;
+  string address = 3;
+  string city = 4;
+  string state = 5;
+  string country = 6;
+}
+
+message Response {
+  bool created = 1;
+  Attraction attraction = 2;
+}
