@@ -5,6 +5,7 @@ package go.micro.srv.attraction;
 
 service AttractionService {
   rpc CreateAttraction(Attraction) returns (Response) {}
+  rpc GetAttractions(GetRequest) returns (Response) {}
 }
 
 message Attraction {
@@ -16,7 +17,11 @@ message Attraction {
   string country = 6;
 }
 
+message GetRequest {}
+
 message Response {
   bool created = 1;
   Attraction attraction = 2;
+
+  repeated Attraction attractions = 3;
 }

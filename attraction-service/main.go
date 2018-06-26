@@ -17,6 +17,7 @@ const (
 // IRepository is an interface for the repository type
 type IRepository interface {
 	Create(*pb.Attraction) (*pb.Attraction, error)
+	GetAll() []*pb.Attraction
 }
 
 // Repository is a temporary stand-in for a consistent datastore
@@ -31,6 +32,10 @@ func (repo *Repository) Create(attraction *pb.Attraction) (*pb.Attraction, error
 	return attraction, nil
 }
 
+func (repo *Repository) GetAll() []*pb.Attraction {
+	return repo.attractions
+}
+
 type service struct {
 	repo IRepository
 }
@@ -43,6 +48,11 @@ func (s *service) CreateAttraction(ctx context.Context, req *pb.Attraction) (*pb
 	}
 
 	return &pb.Response{Created: true, Attraction: attraction}, nil
+}
+
+func (s *service) GetAttractions(ctx context.Context, req *pb.GetRequest) (*pb.Response, error) {
+	attractions := s.repo.GetAll()
+	return &pb.Response{Attractions: attractions}, nil
 }
 
 func main() {
