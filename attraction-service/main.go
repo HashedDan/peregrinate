@@ -1,13 +1,11 @@
 package main
 
 import (
-	"log"
-	"net"
+	"fmt"
 
 	pb "github.com/hasheddan/peregrinate/attraction-service/proto/attraction"
+	micro "github.com/micro/go-micro"
 	"golang.org/x/net/context"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/reflection"
 )
 
 const (
@@ -40,37 +38,40 @@ type service struct {
 	repo IRepository
 }
 
-func (s *service) CreateAttraction(ctx context.Context, req *pb.Attraction) (*pb.Response, error) {
+func (s *service) CreateAttraction(ctx context.Context, req *pb.Attraction, res *pb.Response) error {
 
+	// Save our consignment
 	attraction, err := s.repo.Create(req)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return &pb.Response{Created: true, Attraction: attraction}, nil
+	// Return matching the `Response` message we created in our
+	// protobuf definition.
+	res.Created = true
+	res.Attraction = attraction
+	return nil
 }
 
-func (s *service) GetAttractions(ctx context.Context, req *pb.GetRequest) (*pb.Response, error) {
+func (s *service) GetAttractions(ctx context.Context, req *pb.GetRequest, res *pb.Response) error {
 	attractions := s.repo.GetAll()
-	return &pb.Response{Attractions: attractions}, nil
+	res.Attractions = attractions
+	return nil
 }
 
 func main() {
 	repo := &Repository{}
 
-	// Set-up gRPC server
-	lis, err := net.Listen("tcp", port)
-	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
-	}
-	s := grpc.NewServer()
+	srv := micro.NewService(
+		micro.Name("go.micro.srv.attraction"),
+		micro.Version("latest"),
+	)
 
-	// Connect implementation to grpc service
-	pb.RegisterAttractionServiceServer(s, &service{repo})
+	srv.Init()
 
-	// Register reflection service on gRPC server
-	reflection.Register(s)
-	if err := s.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %v", err)
+	pb.RegisterAttractionServiceHandler(srv.Server(), &service{repo})
+
+	if err := srv.Run(); err != nil {
+		fmt.Println(err)
 	}
 }

@@ -8,8 +8,9 @@ import fmt "fmt"
 import math "math"
 
 import (
+	client "github.com/micro/go-micro/client"
+	server "github.com/micro/go-micro/server"
 	context "golang.org/x/net/context"
-	grpc "google.golang.org/grpc"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -193,107 +194,75 @@ func init() {
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ context.Context
-var _ grpc.ClientConn
+var _ client.Option
+var _ server.Option
 
-// This is a compile-time assertion to ensure that this generated file
-// is compatible with the grpc package it is being compiled against.
-const _ = grpc.SupportPackageIsVersion4
+// Client API for AttractionService service
 
-// AttractionServiceClient is the client API for AttractionService service.
-//
-// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type AttractionServiceClient interface {
-	CreateAttraction(ctx context.Context, in *Attraction, opts ...grpc.CallOption) (*Response, error)
-	GetAttractions(ctx context.Context, in *GetRequest, opts ...grpc.CallOption) (*Response, error)
+	CreateAttraction(ctx context.Context, in *Attraction, opts ...client.CallOption) (*Response, error)
+	GetAttractions(ctx context.Context, in *GetRequest, opts ...client.CallOption) (*Response, error)
 }
 
 type attractionServiceClient struct {
-	cc *grpc.ClientConn
+	c           client.Client
+	serviceName string
 }
 
-func NewAttractionServiceClient(cc *grpc.ClientConn) AttractionServiceClient {
-	return &attractionServiceClient{cc}
+func NewAttractionServiceClient(serviceName string, c client.Client) AttractionServiceClient {
+	if c == nil {
+		c = client.NewClient()
+	}
+	if len(serviceName) == 0 {
+		serviceName = "go.micro.srv.attraction"
+	}
+	return &attractionServiceClient{
+		c:           c,
+		serviceName: serviceName,
+	}
 }
 
-func (c *attractionServiceClient) CreateAttraction(ctx context.Context, in *Attraction, opts ...grpc.CallOption) (*Response, error) {
+func (c *attractionServiceClient) CreateAttraction(ctx context.Context, in *Attraction, opts ...client.CallOption) (*Response, error) {
+	req := c.c.NewRequest(c.serviceName, "AttractionService.CreateAttraction", in)
 	out := new(Response)
-	err := c.cc.Invoke(ctx, "/go.micro.srv.attraction.AttractionService/CreateAttraction", in, out, opts...)
+	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *attractionServiceClient) GetAttractions(ctx context.Context, in *GetRequest, opts ...grpc.CallOption) (*Response, error) {
+func (c *attractionServiceClient) GetAttractions(ctx context.Context, in *GetRequest, opts ...client.CallOption) (*Response, error) {
+	req := c.c.NewRequest(c.serviceName, "AttractionService.GetAttractions", in)
 	out := new(Response)
-	err := c.cc.Invoke(ctx, "/go.micro.srv.attraction.AttractionService/GetAttractions", in, out, opts...)
+	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// AttractionServiceServer is the server API for AttractionService service.
-type AttractionServiceServer interface {
-	CreateAttraction(context.Context, *Attraction) (*Response, error)
-	GetAttractions(context.Context, *GetRequest) (*Response, error)
+// Server API for AttractionService service
+
+type AttractionServiceHandler interface {
+	CreateAttraction(context.Context, *Attraction, *Response) error
+	GetAttractions(context.Context, *GetRequest, *Response) error
 }
 
-func RegisterAttractionServiceServer(s *grpc.Server, srv AttractionServiceServer) {
-	s.RegisterService(&_AttractionService_serviceDesc, srv)
+func RegisterAttractionServiceHandler(s server.Server, hdlr AttractionServiceHandler, opts ...server.HandlerOption) {
+	s.Handle(s.NewHandler(&AttractionService{hdlr}, opts...))
 }
 
-func _AttractionService_CreateAttraction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Attraction)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AttractionServiceServer).CreateAttraction(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/go.micro.srv.attraction.AttractionService/CreateAttraction",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AttractionServiceServer).CreateAttraction(ctx, req.(*Attraction))
-	}
-	return interceptor(ctx, in, info, handler)
+type AttractionService struct {
+	AttractionServiceHandler
 }
 
-func _AttractionService_GetAttractions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AttractionServiceServer).GetAttractions(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/go.micro.srv.attraction.AttractionService/GetAttractions",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AttractionServiceServer).GetAttractions(ctx, req.(*GetRequest))
-	}
-	return interceptor(ctx, in, info, handler)
+func (h *AttractionService) CreateAttraction(ctx context.Context, in *Attraction, out *Response) error {
+	return h.AttractionServiceHandler.CreateAttraction(ctx, in, out)
 }
 
-var _AttractionService_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "go.micro.srv.attraction.AttractionService",
-	HandlerType: (*AttractionServiceServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "CreateAttraction",
-			Handler:    _AttractionService_CreateAttraction_Handler,
-		},
-		{
-			MethodName: "GetAttractions",
-			Handler:    _AttractionService_GetAttractions_Handler,
-		},
-	},
-	Streams:  []grpc.StreamDesc{},
-	Metadata: "proto/attraction/attraction.proto",
+func (h *AttractionService) GetAttractions(ctx context.Context, in *GetRequest, out *Response) error {
+	return h.AttractionServiceHandler.GetAttractions(ctx, in, out)
 }
 
 func init() {

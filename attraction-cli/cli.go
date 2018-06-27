@@ -7,12 +7,12 @@ import (
 	"os"
 
 	pb "github.com/hasheddan/peregrinate/attraction-service/proto/attraction"
+	microclient "github.com/micro/go-micro/client"
+	"github.com/micro/go-micro/cmd"
 	"golang.org/x/net/context"
-	"google.golang.org/grpc"
 )
 
 const (
-	address         = "localhost:50051"
 	defaultFilename = "attraction.json"
 )
 
@@ -27,13 +27,11 @@ func parseFile(file string) (*pb.Attraction, error) {
 }
 
 func main() {
-	// Set up a connection to the server.
-	conn, err := grpc.Dial(address, grpc.WithInsecure())
-	if err != nil {
-		log.Fatalf("Did not connect: %v", err)
-	}
-	defer conn.Close()
-	client := pb.NewAttractionServiceClient(conn)
+
+	cmd.Init()
+
+	// Create new greeter client
+	client := pb.NewAttractionServiceClient("go.micro.srv.attraction", microclient.DefaultClient)
 
 	// Contact the server and print out its response.
 	file := defaultFilename
@@ -41,13 +39,13 @@ func main() {
 		file = os.Args[1]
 	}
 
-	consignment, err := parseFile(file)
+	attraction, err := parseFile(file)
 
 	if err != nil {
 		log.Fatalf("Could not parse file: %v", err)
 	}
 
-	r, err := client.CreateAttraction(context.Background(), consignment)
+	r, err := client.CreateAttraction(context.TODO(), attraction)
 	if err != nil {
 		log.Fatalf("Could not greet: %v", err)
 	}
